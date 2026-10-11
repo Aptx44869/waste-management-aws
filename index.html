@@ -1,0 +1,407 @@
+<title>Waste Sorter</title>
+<style>
+/* Layout concept: single centered card — drop zone on top, result panel below, revealed after a prediction */
+:root{
+  --bg:#f3f1ea;
+  --surface:#ffffff;
+  --ink:#1f2b22;
+  --muted:#6b7566;
+  --line:#dedad0;
+  --organic:#4a7c3f;
+  --organic-bg:#e7f0e2;
+  --recycle:#2f6fa8;
+  --recycle-bg:#e4eef7;
+  --accent:#4a7c3f;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15180f8f; --bg:#14170f;
+    --surface:#1d2117;
+    --ink:#eef0e6;
+    --muted:#9aa390;
+    --line:#333a2b;
+    --organic:#8fd37f;
+    --organic-bg:#213321;
+    --recycle:#7cb4e8;
+    --recycle-bg:#1d2c3a;
+    --accent:#8fd37f;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14170f;
+  --surface:#1d2117;
+  --ink:#eef0e6;
+  --muted:#9aa390;
+  --line:#333a2b;
+  --organic:#8fd37f;
+  --organic-bg:#213321;
+  --recycle:#7cb4e8;
+  --recycle-bg:#1d2c3a;
+  --accent:#8fd37f;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  margin:0;
+  font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+  min-height:100%;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  padding:48px 16px;
+}
+@font-face{
+  font-family:'Inter';
+  src:local('Inter');
+}
+.wrap{
+  width:100%;
+  max-width:440px;
+}
+.eyebrow{
+  font-size:12px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin:0 0 6px;
+  font-weight:600;
+}
+h1{
+  font-family:'Fraunces',Georgia,serif;
+  font-size:32px;
+  line-height:1.1;
+  margin:0 0 8px;
+  font-weight:600;
+}
+.sub{
+  color:var(--muted);
+  font-size:14px;
+  margin:0 0 28px;
+  line-height:1.5;
+}
+.card{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:20px;
+}
+.drop{
+  border:1.5px dashed var(--line);
+  border-radius:12px;
+  padding:28px 16px;
+  text-align:center;
+  cursor:pointer;
+  transition:border-color .15s ease, background .15s ease;
+  position:relative;
+}
+.drop.drag{
+  border-color:var(--accent);
+  background:var(--organic-bg);
+}
+.drop input{
+  position:absolute;
+  inset:0;
+  opacity:0;
+  cursor:pointer;
+}
+.drop-icon{
+  font-size:28px;
+  margin-bottom:8px;
+  display:block;
+}
+.drop-text{
+  font-size:14px;
+  color:var(--ink);
+  font-weight:500;
+  margin:0 0 2px;
+}
+.drop-hint{
+  font-size:12px;
+  color:var(--muted);
+  margin:0;
+}
+.preview{
+  display:none;
+  margin-top:16px;
+}
+.preview.on{display:block}
+.preview img{
+  width:100%;
+  max-height:220px;
+  object-fit:cover;
+  border-radius:10px;
+  display:block;
+  border:1px solid var(--line);
+}
+.filename{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:8px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+button.go{
+  width:100%;
+  margin-top:16px;
+  padding:13px;
+  border:none;
+  border-radius:10px;
+  background:var(--ink);
+  color:var(--bg);
+  font-size:14px;
+  font-weight:600;
+  cursor:pointer;
+  font-family:inherit;
+  transition:opacity .15s ease, transform .1s ease;
+}
+button.go:disabled{
+  opacity:.35;
+  cursor:not-allowed;
+}
+button.go:active:not(:disabled){transform:scale(.98)}
+
+.result{
+  margin-top:16px;
+  border-radius:12px;
+  padding:18px;
+  display:none;
+}
+.result.on{display:block}
+.result.organic{background:var(--organic-bg)}
+.result.recycle{background:var(--recycle-bg)}
+.result-label{
+  font-family:'Fraunces',Georgia,serif;
+  font-size:24px;
+  font-weight:600;
+  margin:0 0 4px;
+}
+.result.organic .result-label{color:var(--organic)}
+.result.recycle .result-label{color:var(--recycle)}
+.result-sub{
+  font-size:12px;
+  color:var(--muted);
+  margin:0 0 12px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.bar-track{
+  height:6px;
+  border-radius:4px;
+  background:rgba(0,0,0,.08);
+  overflow:hidden;
+}
+:root[data-theme="dark"] .bar-track, @media (prefers-color-scheme:dark){ .bar-track{background:rgba(255,255,255,.1)} }
+.bar-fill{
+  height:100%;
+  border-radius:4px;
+  width:0%;
+  transition:width .6s cubic-bezier(.2,.8,.2,1);
+}
+.result.organic .bar-fill{background:var(--organic)}
+.result.recycle .bar-fill{background:var(--recycle)}
+.bar-row{
+  display:flex;
+  justify-content:space-between;
+  font-size:12px;
+  color:var(--muted);
+  margin-top:6px;
+  font-variant-numeric:tabular-nums;
+}
+.status{
+  display:none;
+  margin-top:16px;
+  font-size:13px;
+  color:var(--muted);
+  text-align:center;
+}
+.status.on{display:block}
+.error{
+  display:none;
+  margin-top:16px;
+  padding:14px;
+  border-radius:10px;
+  background:rgba(200,60,60,.1);
+  color:#b3433f;
+  font-size:13px;
+  line-height:1.5;
+}
+.error.on{display:block}
+.endpoint{
+  margin-top:20px;
+  font-size:11px;
+  color:var(--muted);
+  text-align:center;
+  word-break:break-all;
+}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Inter:wght@400;500;600&display=swap">
+
+<div class="wrap">
+  <p class="eyebrow">waste-classifier-api</p>
+  <h1>Waste Sorter</h1>
+  <p class="sub">Upload a photo of an item. The model, trained on a CNN and served from AWS Lambda, predicts whether it's organic or recyclable.</p>
+
+  <div class="card">
+    <label class="drop" id="drop">
+      <input type="file" id="file" accept="image/*">
+      <span class="drop-icon">📷</span>
+      <p class="drop-text">Drop a photo here, or click to choose one</p>
+      <p class="drop-hint">JPG or PNG</p>
+    </label>
+
+    <div class="preview" id="preview">
+      <img id="previewImg" alt="Selected item">
+      <p class="filename" id="filename"></p>
+    </div>
+
+    <button class="go" id="go" disabled>Classify item</button>
+
+    <div class="status" id="status">Calling the model…</div>
+    <div class="error" id="error"></div>
+
+    <div class="result" id="result">
+      <p class="result-label" id="resultLabel"></p>
+      <p class="result-sub" id="resultSub"></p>
+      <div class="bar-track"><div class="bar-fill" id="bar"></div></div>
+      <div class="bar-row">
+        <span>Confidence</span>
+        <span id="confVal"></span>
+      </div>
+    </div>
+  </div>
+
+  <p class="endpoint">POST /predict · ap-south-1</p>
+</div>
+
+<script>
+const ENDPOINT = "https://ycbqfw5x98.execute-api.ap-south-1.amazonaws.com/predict";
+
+const fileInput = document.getElementById('file');
+const drop = document.getElementById('drop');
+const preview = document.getElementById('preview');
+const previewImg = document.getElementById('previewImg');
+const filenameEl = document.getElementById('filename');
+const goBtn = document.getElementById('go');
+const statusEl = document.getElementById('status');
+const errorEl = document.getElementById('error');
+const resultEl = document.getElementById('result');
+const resultLabel = document.getElementById('resultLabel');
+const resultSub = document.getElementById('resultSub');
+const bar = document.getElementById('bar');
+const confVal = document.getElementById('confVal');
+
+let base64Image = null;
+
+function resetOutputs(){
+  errorEl.classList.remove('on');
+  resultEl.classList.remove('on');
+  statusEl.classList.remove('on');
+  bar.style.width = '0%';
+}
+
+function fileToBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      const base64 = result.substring(result.indexOf(',') + 1);
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleFile(file){
+  if (!file || !file.type.startsWith('image/')) return;
+  resetOutputs();
+  filenameEl.textContent = file.name;
+  previewImg.src = URL.createObjectURL(file);
+  preview.classList.add('on');
+  goBtn.disabled = true;
+  try{
+    base64Image = await fileToBase64(file);
+    goBtn.disabled = false;
+  }catch(e){
+    showError('Could not read that image file. Try a different one.');
+  }
+}
+
+fileInput.addEventListener('change', (e) => {
+  handleFile(e.target.files[0]);
+});
+
+['dragenter','dragover'].forEach(evt => {
+  drop.addEventListener(evt, (e) => {
+    e.preventDefault();
+    drop.classList.add('drag');
+  });
+});
+['dragleave','drop'].forEach(evt => {
+  drop.addEventListener(evt, (e) => {
+    e.preventDefault();
+    drop.classList.remove('drag');
+  });
+});
+drop.addEventListener('drop', (e) => {
+  const file = e.dataTransfer.files[0];
+  if (file){
+    fileInput.files = e.dataTransfer.files;
+    handleFile(file);
+  }
+});
+
+function showError(msg){
+  errorEl.textContent = msg;
+  errorEl.classList.add('on');
+  statusEl.classList.remove('on');
+}
+
+goBtn.addEventListener('click', async () => {
+  if (!base64Image) return;
+  resetOutputs();
+  statusEl.classList.add('on');
+  goBtn.disabled = true;
+
+  try{
+    const res = await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64Image })
+    });
+
+    if (!res.ok){
+      throw new Error('API responded with status ' + res.status);
+    }
+
+    const data = await res.json();
+    const label = (data.label || data.prediction || '').toString();
+    const confidence = typeof data.confidence === 'number' ? data.confidence : null;
+
+    statusEl.classList.remove('on');
+
+    const isOrganic = label.toLowerCase().startsWith('o');
+    resultEl.className = 'result on ' + (isOrganic ? 'organic' : 'recycle');
+    resultLabel.textContent = label || 'Unknown';
+    resultSub.textContent = isOrganic ? 'Organic waste' : 'Recyclable material';
+
+    const pct = confidence !== null ? confidence : 0;
+    confVal.textContent = confidence !== null ? pct.toFixed(2) + '%' : '—';
+    requestAnimationFrame(() => { bar.style.width = Math.min(pct, 100) + '%'; });
+
+  }catch(err){
+    statusEl.classList.remove('on');
+    showError(
+      "Couldn't reach the model. If this is your first request, make sure CORS is enabled on the /predict route in API Gateway " +
+      "(Access-Control-Allow-Origin: *, methods POST + OPTIONS). Details: " + err.message
+    );
+  }finally{
+    goBtn.disabled = false;
+  }
+});
+</script>
